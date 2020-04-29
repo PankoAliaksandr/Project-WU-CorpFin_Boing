@@ -1,0 +1,247 @@
+\documentclass{article}
+\usepackage[ansinew]{inputenc}
+\author{Julian Amon, Ekaterina Cherkasova, Nikolaus D\"orfler, Aliaksandr Panko}
+\title{QFin Corporate Finance - Case Study III \\ The Boeing Co.}
+
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{dsfont}
+\usepackage{mathtools}
+\usepackage{enumitem}
+\usepackage{upgreek}
+\usepackage{float}
+\usepackage[left=25mm,top=25mm,bottom=25mm,right=25mm]{geometry}
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\begin{document}
+\maketitle
+
+\section{Exercise 11}
+Data preparation:
+<<message=FALSE,warning=FALSE,size="footnotesize">>=
+library(readxl)
+library(quantmod)
+library(stargazer)
+library(MASS)
+path<-"C:/Users/Nikolaus Dörfler/Desktop/quant_finance_master/2nd_year/Corporate finance/3rd_casestudy"
+market_data<-read.csv2(paste(path,"/Market Data.csv", sep=""))
+market_data[,1]<-as.Date(as.character(market_data[,1]),"%d.%m.%Y")
+market_data[,2]<-as.numeric(as.character(market_data[,2]))
+market_data[,3]<-as.numeric(as.character(market_data[,3]))
+colnames(market_data)<-c("Date","BA","SPXT")
+market_xts<-xts(market_data[,2:3],order.by = market_data[,1])
+
+ff_data<-read.csv(paste(path,"/FF_3_Factors_weekly.csv",sep=""))
+ff_data$X<-as.Date(as.character(ff_data$X),"%Y%m%d")
+ff_data[,2:5]<-ff_data[,2:5]/100
+ff_data<-ff_data[-nrow(ff_data),]
+ff_xts<-xts(ff_data[,2:5],order.by = ff_data$X)
+
+market_xts<-market_xts[1509:nrow(market_xts),]
+ff_xts<-ff_xts[314:nrow(ff_xts),]
+
+BA_weekly<-weeklyReturn(market_xts$BA,type="log")-(ff_xts[,4]/4)
+@
+The Boeing return data were obtained from Bloomberg, while the weekly factor returns and risk-free rates (one-month Treasury bill rate) were obained from Kenneth French's website.
+<<fig.height=4.5,size="small">>=
+#Weekly rolling beta
+N_weekly<-nrow(BA_weekly)
+window<-104
+factor_exposures<-matrix(0,N_weekly-window+1,3)
+for(i in 0:(N_weekly-window)){
+  factor_exposures[(i+1),]<-coef(lm(BA_weekly[(i+1):(i+window)]~ff_xts[(i+1):(i+window),1:3]))[2:4]
+}
+index(BA_weekly)[105]
+colnames(factor_exposures)<-c("Market","SMB","HML")
+datesforaxis<-index(BA_weekly)[104:length(index(BA_weekly))]
+plot(datesforaxis,factor_exposures[,1],main="FF Factors based on weekly returns",
+     type="l",ylim=c(-0.6,1.35),ylab="Estimated coefficient",xlab="Time")
+lines(datesforaxis,factor_exposures[,2],col="red")
+lines(datesforaxis,factor_exposures[,3],col="blue")
+legend("bottomleft", c("Market", "SMB", "HML"),
+       col = c("black","red","blue"),lty = c(1, 1, 1),merge = TRUE,cex=0.6)
+@
+
+\section{Exercise 12}
+We use the same data as before:
+<<fig.height=4.5,size="small">>=
+market_betas<-numeric(N_weekly-window+1)
+for(i in 0:(N_weekly-window)){
+  market_betas[i+1]<-coef(lm(BA_weekly[(i+1):(i+window)]~ff_xts[(i+1):(i+window),1]))[2]
+}
+plot(datesforaxis,factor_exposures[,1],main="FF Market Factor vs. CAPM Equity Beta",
+     type="l",ylab="Estimated coefficient",xlab="Time")
+lines(datesforaxis,market_betas,col="red")
+legend("topleft", c("FF Market Factor", "CAPM Beta"),
+       col = c("black","red"),lty = c(1, 1),merge = TRUE,cex=0.75)
+@
+We see that including the other factors from the 3 factor model compared to the CAPM, which - in a way - serve as control variables in this context, at times has quite a noticeable effect on the coefficient estimate associated with the market factor.
+
+\section{Exercise 13}
+The most recent yield-to-maturity (YTM) of 10-year treasury bonds available from the US department of treasury at the time of creation of this document (26/12/2018) was 2.81 \%. We use the average factor estimates over the rolling period that has been used in exercises 11 and 12.
+<<>>=
+risk_free<-0.0281
+MRP<-0.1-risk_free
+SMB<-apply(ff_xts,2,mean)[2]*50
+HML<-apply(ff_xts,2,mean)[3]*50
+factors<-rbind(MRP,SMB,HML)
+
+coe_capm<-mean(market_betas)*MRP+risk_free
+coe_ff<-as.numeric(rbind(apply(factor_exposures,2,mean))%*%factors)+risk_free
+
+#Expected equity return according to CAPM:
+coe_capm
+
+#Expected equity return according to FF 3-Factors:
+coe_ff
+@
+
+\newpage
+
+\section{Exercise 14}
+We reuse the data from the first case study again to analyse the dividend payments from the past. We see a gradual increase in dividend payments every year:
+
+<<fig.height=4.5,echo=FALSE,message = FALSE, warnings = FALSE>>=
+Div<- read_xlsx("C:/Users/Nikolaus Dörfler/Desktop/quant_finance_master/2nd_year/Corporate finance/3rd_casestudy/Ex_3.xlsx", sheet="Div")
+Div<- as.data.frame(Div)
+datesforaxes<-rev(as.Date(Div$`Ex/Eff Date`))
+plot(rev(as.Date(Div$`Ex/Eff Date`)),rev(Div$`Amount, $`),type="s",ylab="Dividend",xlab="Time",main="Development of dividends per share of Boeing Co.")
+@
+
+The CAGR of dividend payments is approximately 25.39 \%, so it is too high to use it as a future terminal growth rate. However, we will use it to estimate next year's dividend in 2019:
+<<>>=
+nextyeargrowth<-(Div$`Amount, $`[1]/Div$`Amount, $`[nrow(Div)])^(1/6)-1
+nextyeargrowth
+nextdiv<-Div$`Amount, $`[1]*(1+nextyeargrowth)
+nextdiv
+@
+Our estimate for the 2019 dividend is hence 2.14 \$. The terminal growth rate is instead inspired by the recent GDP growth in the US and use 4.5 \%. The value of one share based on the dividend growth model is thus calculated as follows:
+<<>>=
+nextdiv/(coe_capm-0.045)
+@
+The value of one share calculated this way is of course much lower than the current stock price. This is because the market risk premium used is quite high compared to usual standard practices and the used growth rate is not sufficiently reflective of the growth potential of Boeing, which is evident when looking at the past growth rates. And finally, it is of course also a consequence of the extremely simplistic valuation model.
+
+\newpage
+
+\section{Exercise 15}
+
+The task is to value our firm by discounting all future FCFs and forecasting them till the year of 2021.\\
+
+The FCFs get calculated the following way (data was obtained form the earnings release statement from the boeing website):
+
+\[
+FCF = (Revenues - Costs) (1 - \tau_{c}) - CapEx - \delta NWC + \tau_{c} * Depreciation
+\]
+
+Since Boeing reported extremly strong growth rates of FCFs, we decided to draw from the sample distribution of the last 9 years to simulate a relatistic forecast of FCFs. By doing so we still keep the average growth rate but also include the very likely possibility of deviations from it.
+
+<<fig.height=4.5, echo=FALSE,message = FALSE,warnings = FALSE>>=
+FCF <- read_xlsx("C:/Users/Nikolaus Dörfler/Desktop/quant_finance_master/2nd_year/Corporate finance/3rd_casestudy/FinancialData_Boeing_CompustatCapitalIQ_wrds_1979_2018.xlsx", sheet="Tabelle2", col_types = c("date", "numeric"))##FCFs according to earnings releas statements boeing website.
+
+
+dates <- seq(as.Date("2009-12-31"),length= (nrow(FCF)),by="years")
+FCF_xts <- xts(FCF[,2], order.by = dates)
+index(FCF_xts)
+
+
+##increase of FCF:
+i <- 1
+incr <- NULL
+for (i in 1:(nrow(FCF_xts)-1)) {
+  incr <- c(incr, (as.numeric(FCF_xts[i+1,]) - as.numeric(FCF_xts[i,]))/(abs(as.numeric(FCF_xts[i,]))))
+}
+
+
+plot(index(FCF_xts),FCF_xts, type = "l", main = "FCF excluding forecast", ylab = "FCF", xlab = "years")
+
+##forecast:
+set.seed(13)
+incr_future <- quantile(incr, probs = runif(4, 0,1)) 
+date1 <- seq(as.Date("2019-12-31"),length= 4,by="years")
+forecast_FCF <- FCF_xts[nrow(FCF_xts),]
+for (i in 1:4) {
+  forecast_FCF <- c(forecast_FCF, forecast_FCF[i,] * (1 + incr_future[i])) 
+}
+forecast_FCF <- forecast_FCF[-1,]##getting rid of already included value 31-12-17
+index(forecast_FCF) <- date1
+plot(index(rbind(forecast_FCF,FCF_xts)),rbind(forecast_FCF,FCF_xts), main = "FCF including forecast", type = "l", ylab = "FCF", xlab = "years")
+@
+
+Given the following debt ratings of Boeing that were taken from Moody and Standard and Poors, we would theoretically decide to take $\beta_{D} = 0.01$ (Using the Table 12.3 in Berk/ DeMarzo 4th. ed.).\\
+
+
+\begin{table}[hbt]
+\centering
+\caption{Boeing Co. credit ratings}
+\vspace{0.3cm}
+\begin{tabular}{|c|c|c|c|c|}
+
+ \hline
+    \multirow{2}{*} {Year} &
+      \multicolumn{2}{c|}{$S\&P$} &
+      \multicolumn{2}{|c|}{Moody's} \\
+  \cline{2-5}
+      & Short-term & Long-term & Short-term & Long-term\\
+        \hline
+    2012 & A-1& A & P-1 & A2   \\ 
+   2013 & A-1& A & P-1 & A2 \\ 
+   2014 & A-1& A & P-1 & A2    \\ 
+   2015 & A-1& A & P-1 & A2    \\ 
+   2016 & A-1& A & P-1 & A2   \\ 
+   2017 & A-1& A & P-1 & A2    \\ 
+   2018 & A-1& A & P-1 & A2   \\ 
+   \hline
+\end{tabular}
+\end{table}
+\\
+
+However, we find in the annual financial statement that there is 4 equally weighted layers of debt with an average cost of debt capital of $3,3\%$ p.a., instead of $1,1\%$ as suggested by the model.\\
+
+For the cost of equity we will use the rate as suggested by the CAPM.\\
+
+The WACC, taking a tax rate of $21\%$ into account, gets calcultated the following way:
+
+\[
+r_{wacc} = \frac{E}{V_{0}^{L}} r_{E} + \frac{D}{V_{0}^{L}} r_{D}(1-\tau_{c})
+\]
+
+By Semptember 30th 2018, the debt´s market value amounted to $115.87$ billion USD and the equity´s market value to $183.887$ billion USD. The firm´s book value of equity was negative by a $1,2$ billion USD.
+<<>>=
+
+debt <- (114659 + 1209)*10^(6)##September 30th 2018  ##negative equity -> +1209
+book_equity <- -1209 * 10^(6)
+equity <- 183.887 * 10^(9)
+shares_outst <- 657.885 * 10 ^6
+total_value <- debt + equity
+tau_c <- 0.21
+total_value <- debt+equity
+return_debt <- ff_data[nrow(ff_data),5] + 0.01 * MRP
+interestrate_debt <- c(0.028, 0.0325, 0.0355, 0.03625) 
+return_debt_true <- mean(interestrate_debt)
+return_equity <- coe_capm
+rwacc <- (equity/total_value) * return_equity + (debt/total_value) * return_debt_true * (1 - tau_c)
+
+
+@
+
+In the next step we calculate the fair value: (we assume the future FCF to grow at a rate of $2\%$ on average, since we are valuing a US company. As a rule of thumb growth rates of future FCFs should not exceed the GDP growth on average of the country the companies main operations´ take place. However, Boeing is a company acting in an international environment.\\
+
+\[
+V_{N} = \frac{FCF_{N+1}}{r_{wacc} - g_{FCF}}
+\]
+
+<<>>=
+
+V_2018 <- as.numeric((forecast_FCF[nrow(forecast_FCF),])/(rwacc - 0.02)*((1+rwacc)^(-2)))
+V_2018 - equity
+value_pershare <- V_2018/shares_outst
+value_pershare
+@
+
+We argue that given above Analysis Boeing is undervalued by a 128 billion USD. Therefore, we see the true value of one share at around 474.349 USD, which is way higher than for the dividend growth model, giving us a valuation of only $37.377$ USD per share. We argue that the dividend growth model is less used in practice and therefore reflects the firm´s value in a more inaccurate way than the FCF model. Nonentheless, we need to take into consideration, that also for the FCF model the firm´s estimated values can deviate strongly from each other, since the FCF forecasts can either be projected in a very optimistic or pessimistic way. It is therefore difficult to draw exact conlcusions of whether a company is over- or undervalued from just the FCF - or dividend growth model. 
+
+
+\end{document}

@@ -1,0 +1,162 @@
+\documentclass{article}
+\usepackage[ansinew]{inputenc}
+\author{Julian Amon, Ekaterina Cherkasova, Nikolaus D\"orfler, Aliaksandr Panko}
+\title{QFin Corporate Finance - Case Study IV \\ The Boeing Co.}
+
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{dsfont}
+\usepackage{mathtools}
+\usepackage{enumitem}
+\usepackage{upgreek}
+\usepackage{float}
+\usepackage[left=25mm,top=25mm,bottom=25mm,right=25mm]{geometry}
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\begin{document}
+\maketitle
+
+\section{Exercise 16}
+Data preparation:
+<<message=FALSE,warning=FALSE,size="footnotesize">>=
+library(readxl)
+library(quantmod)
+library(stargazer)
+path<-"C:/Users/julia/Documents/Studium - MSc WU/3. Semester/Corporate Finance/Case Study/Case Study IV"
+market_data<-read.csv2(paste(path,"/Market Data.csv", sep=""))
+market_data[,1]<-as.Date(as.character(market_data[,1]),"%d.%m.%Y")
+market_data[,2]<-as.numeric(as.character(market_data[,2]))
+market_data[,3]<-as.numeric(as.character(market_data[,3]))
+colnames(market_data)<-c("Date","BA","SPXT")
+market_xts<-xts(market_data[,2:3],order.by = market_data[,1])
+
+market_xts<-market_xts[1005:nrow(market_xts),]
+
+BA_daily<-dailyReturn(market_xts$BA)
+market_daily<-dailyReturn(market_xts$SPXT)
+@
+The Boeing and market return data were obtained from Bloomberg. We approximate the market portfolio for the calculation of the benchmark return based on the CAPM by using the S\&P 500 TR index.
+<<message=FALSE,warning=FALSE>>=
+#Dividend declaration dates:
+Div<- read_xlsx(paste(path,"/Ex_3.xlsx", sep=""), sheet="Div")
+Div<- as.data.frame(Div)
+divdecl_dates<-as.Date(Div$Decl.Date)
+
+#Repurchase announcement dates:
+Rep<- read_xlsx(paste(path,"/Ex_3.xlsx", sep=""), sheet="Rep")
+Rep<- as.data.frame(Rep)
+repoannouc_dates<-as.Date(Rep$Dates)
+
+repoannouc_dates %in% divdecl_dates
+
+eventdates<-c(divdecl_dates[2:length(divdecl_dates)],repoannouc_dates[6])
+eventdates<-sort(eventdates,decreasing = TRUE)
+eventdates[25]<-as.Date("2012-10-31","%Y-%m-%d")
+nuevents<-length(eventdates)
+@
+We examine the event dates of announcements of dividends and tender offers for share repurchases as displayed in table 1. 
+<<results="hide",echo=FALSE>>=
+stargazer(as.data.frame(eventdates),summary = FALSE)
+@
+\begin{table}[!htbp] \centering 
+\footnotesize
+  \caption{Event dates examined} 
+\begin{tabular}{@{\extracolsep{5pt}} c} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+2018-06-25 \\ 
+2018-04-30 \\ 
+2017-12-11 \\ 
+2017-10-30 \\ 
+2017-06-26 \\ 
+2017-05-01 \\ 
+2016-12-12 \\ 
+2016-10-31 \\ 
+2016-06-27 \\ 
+2016-05-02 \\ 
+2015-12-14 \\ 
+2015-10-26 \\ 
+2015-06-22 \\ 
+2015-04-27 \\ 
+2014-12-15 \\ 
+2014-10-27 \\ 
+2014-06-23 \\ 
+2014-04-28 \\ 
+2013-12-16 \\ 
+2013-10-28 \\ 
+2013-06-24 \\ 
+2013-04-29 \\ 
+2012-12-17 \\ 
+2012-12-11 \\ 
+2012-10-29 \\ 
+2012-06-25 \\ 
+2012-04-30 \\ 
+2011-12-12 \\ 
+\hline \\[-1.8ex] 
+\end{tabular} 
+\end{table}
+
+Next, we perform the actual event study:
+<<>>=
+eventmatrix<-matrix(0,226,nuevents+1)
+eventmatrix[,1]<-c((-220):5)
+colnames(eventmatrix)<-c("index",1:nuevents)
+
+marketmatrix<-matrix(0,226,nuevents+1)
+marketmatrix[,1]<-c((-220):5)
+colnames(marketmatrix)<-c("index",1:nuevents)
+
+#Event row: 221
+for(i in 1:length(eventdates)){
+  selector<-which(index(BA_daily)==eventdates[i])
+  selection<-seq(selector-220,selector+5)
+  eventmatrix[,(i+1)]<-as.numeric(BA_daily[selection])
+  marketmatrix[,(i+1)]<-as.numeric(market_daily[selection])
+}
+
+#Estimate betas in estimation period (-220,-21):
+betas<-matrix(NA,2,nuevents+1)
+for(i in 2:ncol(eventmatrix)){
+  betas[,i]<-coef(lm(eventmatrix[1:200,i]~marketmatrix[1:200,i]))
+}
+
+abnormal<-matrix(0,11,nuevents+1)
+abnormal[,1]<-c((-5):5)
+colnames(abnormal)<-c("index",1:nuevents)
+for(i in 2:ncol(abnormal)){
+  abnormal[,i]<-eventmatrix[216:226,i]-betas[1,i]-betas[2,i]*marketmatrix[216:226,i]
+}
+
+#Average abnormal return
+AAR<-apply(abnormal[,2:ncol(abnormal)],1,mean)
+#CAAR: -5 to +5
+CAR_1<-cumsum(AAR)
+#CAAR: -5 to 0
+CAR_2<-cumsum(AAR)[1:6]
+#CAAR: 0 to +5
+CAR_3<-cumsum(AAR[6:11])
+@
+
+\section{Exercise 17}
+<<fig.height=4>>=
+plot(abnormal[,1],CAR_1,type="l",xlab="Time index",ylab="CAR",main="Cumulative Average Abnormal return over time - -5 to +5",cex.main=0.8)
+
+plot(CAR_2,type="l",xlab="Time index",ylab="CAR",ylim=c(-0.008,0.005),main="Cumulative Average Abnormal return over time - Subperiods",cex.main=0.8)
+lines(CAR_3,xlab="Time index",ylab="CAR",col="red")
+legend("topright",c("-5,0","0,+5"),cex=0.75,col=c("black","red"),lty=rep(1,2),merge=TRUE)
+
+plot(cumsum(abnormal[,2]),type="l",ylim=c(-0.06,0.09),main="CAR for all events individually")
+apply(apply(abnormal[,3:ncol(abnormal)],2,cumsum),2,lines)
+@
+We also perform standard statistical tests to test for the significance of the cumulative abnormal returns:
+<<>>=
+crossseccar<-apply(abnormal[,3:ncol(abnormal)],2,sum)
+t.test(crossseccar)
+@
+Based on the dividend signaling hypothesis that is explained in detail in Berk/deMarzo, we might suspect that dividend changes reflect managers' views about a firms's future earnings prospects. More specifically, our a priori assumptiom might be that a firm's dividend choice will contain information regarding the expectations of the management for future earnings, so that, whenever a firm increases its dividend, it sends a positive signal to investors. This is because we often observe that firms smooth there dividends to generate less fluctuating cash-flows for the investors by not transitioning the earnings fluctuations 1:1 to dividends, but rather smooth them over time. If this is the case, however, a dividend increase can be interpreted as a signal that management expects to be able to afford the higher dividend on a smoothed basis over the next couple of periods. A correspondingly negative signal is of course likely to be the case under this framework if management cuts the dividend.\\
+
+Such a scenario hence suggests itself for the examination in context of an event study as was performed above. We investigate whether the announcement of the dividend has a significant impact on the abnormal return, i.e. the return that exceeds the one we would expect based on Boeing's usual exposure to systematic risk, i.e. to the market. We do not observe any significant cumulative abnormal return, however, and also the graphs as displayed above show that there is no real jump in the CAR as we might expect there to be based on the dividend signaling hypothesis. We believe the reason for this to be twofold: on the one hand, Boeing may not generically fall into the category of companies that apply a dividend smoothing approach, since -- as we showed in the previous case studies -- it has increased it's dividend by a rather consistent growth rate every year over quite a long period of time, implying that the desire for smoothing might not be as strong here. This of course creates the expectation among market participants that Boeing will raise dividends at each announce, such that the positivity of the signal that such an announcement of a raise in dividends theoretically has under dividend smoothing, vanishes, as investors actually expect it anyway. Based on this, we might conjecture however that a dividend cut for Boeing might be a highly strong negative signal as it is diametrically opposed to what the investors might expect. Secondly and in strong relation to that, markets can be considered at least weakly and maybe even semi-strongly efficient, so that all the available information is already incorporated in the prices at any given moment. The expected increase in the dividend is hence already priced into the current Boeing stock price so that we cannot reasonably expect to be making a significant abnormal profit on the basis of trading on dividend announcement information.
+\end{document}

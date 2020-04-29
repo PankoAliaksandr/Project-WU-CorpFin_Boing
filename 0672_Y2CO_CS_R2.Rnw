@@ -1,0 +1,141 @@
+\documentclass{article}
+\usepackage[ansinew]{inputenc}
+\author{Julian Amon, Ekaterina Cherkasova, Nikolaus D\"orfler, Aliaksandr Panko}
+\title{QFin Corporate Finance - Case Study II \\ The Boeing Co.}
+
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{dsfont}
+\usepackage{mathtools}
+\usepackage{enumitem}
+\usepackage{upgreek}
+\usepackage{float}
+\usepackage[left=25mm,top=25mm,bottom=25mm,right=25mm]{geometry}
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\begin{document}
+\maketitle
+
+\section{Exercise 8}
+<<message=FALSE,warning=FALSE,echo=FALSE>>=
+library(quantmod)
+library(stargazer)
+path<-"D:/"
+market_data<-read.csv2(paste(path,"0672_Y2CO_CS_D2-1.csv", sep=""))
+market_data[,1]<-as.Date(as.character(market_data[,1]),"%d.%m.%Y")
+market_data[,2]<-as.numeric(as.character(market_data[,2]))
+market_data[,3]<-as.numeric(as.character(market_data[,3]))
+colnames(market_data)<-c("Date","BA","SPXT")
+market_xts<-xts(market_data[,2:3],order.by = market_data[,1])
+market_xts<-market_xts[2014:nrow(market_xts),]
+@
+As before, we use the S\&P 500 TR index as a proxy for the market portfolio. We compute daily, weekly and monthly returns for both Boeing and the market portfolio and then implement the rolling sample beta estimation. The data for these calculations were obtained from Bloomberg.
+<<fig.height=3.5>>=
+BA_daily<-dailyReturn(market_xts$BA,type="log")
+BA_weekly<-weeklyReturn(market_xts$BA,type="log")
+BA_monthly<-monthlyReturn(market_xts$BA,type="log")
+market_daily<-dailyReturn(market_xts$SPXT,type="log")
+market_weekly<-weeklyReturn(market_xts$SPXT,type="log")
+market_monthly<-monthlyReturn(market_xts$SPXT,type="log")
+
+#Daily rolling beta
+N_daily<-nrow(BA_daily)
+window<-200
+betas_daily<-numeric(N_daily-window+1)
+for(i in 0:(N_daily-window)){
+  betas_daily[i+1]<-coef(lm(BA_daily[(i+1):(i+window)]~market_daily[(i+1):(i+window)]))[2]
+}
+plot(betas_daily,main="Equity beta based on daily returns (200 days)",type="l")
+
+#Weekly rolling beta
+N_weekly<-nrow(BA_weekly)
+window<-104
+betas_weekly<-numeric(N_weekly-window+1)
+for(i in 0:(N_weekly-window)){
+  betas_weekly[i+1]<-coef(lm(BA_weekly[(i+1):(i+window)]~market_weekly[(i+1):(i+window)]))[2]
+}
+plot(betas_weekly,main="Equity beta based on weekly returns (104 weeks)",type="l")
+@
+Note that for monthly rolling beta, 60 months estimation window is not feasible as the period from January 2014 to today comprises only 59 months. Hence, we choose two years, i.e. 24 months as the rolling window instead:
+<<fig.height=4>>=
+#Monthly rolling beta
+N_monthly<-nrow(BA_monthly)
+window<-24
+betas_monthly<-numeric(N_monthly-window+1)
+for(i in 0:(N_monthly-window)){
+  betas_monthly[i+1]<-coef(lm(BA_monthly[(i+1):(i+window)]~market_monthly[(i+1):(i+window)]))[2]
+}
+plot(betas_monthly,main="Equity beta based on monthly returns (60 months)",type="l")
+@
+
+\section{Exercise 9}
+
+The company ratings were taken from \href{https://www.moodys.com/}{Moody's} and \href{https://www.standardandpoors.com/en_US/web/guest/home}{Standard and Poor's}.
+
+\begin{table}[hbt]
+\centering
+\caption{Boeing Co. credit ratings}
+\vspace{0.3cm}
+\begin{tabular}{|c|c|c|c|c|}
+
+ \hline
+    \multirow{2}{*} {Year} &
+      \multicolumn{2}{c|}{$S\&P$} &
+      \multicolumn{2}{|c|}{Moody's} \\
+  \cline{2-5}
+      & Short-term & Long-term & Short-term &  Long-term\\
+        \hline
+    2012 & A-1& A & P-1 & A2   \\ 
+   2013 & A-1& A & P-1 & A2 \\ 
+   2014 & A-1& A & P-1 & A2    \\ 
+   2015 & A-1& A & P-1 & A2    \\ 
+   2016 & A-1& A & P-1 & A2   \\ 
+   2017 & A-1& A & P-1 & A2    \\ 
+   2018 & A-1& A & P-1 & A2   \\ 
+   \hline
+\end{tabular}
+\end{table}
+
+\section{Exercise 10}
+
+To calculate Asset Beta the next formula can be used:
+\begin{equation*}
+  \beta_U = \frac{MarketCap}{MarketCap + NetDebt}*\beta_E + \frac{NetDebt}{MarketCap +              NetDebt}*\beta_D
+\end{equation*}
+
+Using the Table 12.3 in Berk/ DeMarzo 4th. ed. and having Boing ratings no lower than A we take $\beta_D = 0.01$
+<<fig.height=3.5>>=
+betas = c(rep(NA,times = 103), betas_weekly)
+
+BA_weekly_df <- cbind(time(BA_weekly), as.data.frame(BA_weekly), betas)
+rownames(BA_weekly_df) <- NULL
+colnames(BA_weekly_df)<-c("Date","Returns","Beta")
+
+path <- "D:/"
+boing_data <- read.csv2(paste(path, "0672_Y2CO_CS_D2-2.csv", sep=""),
+                        sep = ',',
+                        stringsAsFactors = FALSE)
+
+boing_data$Date <- as.Date(boing_data$Date, "%m/%d/%Y")
+
+
+final_df <- merge(boing_data, BA_weekly_df, by.x = "Date")
+final_df <- subset(final_df, select = -c(Returns))
+final_df <- cbind(final_df, Beta_Debt = 0.01)
+final_df$Net.Debt <- as.double(final_df$Net.Debt)
+final_df$Market.Capitalization <- as.double(final_df$Market.Capitalization)
+
+final_df$Beta_Asset <- final_df$Market.Capitalization /
+  (final_df$Market.Capitalization + final_df$Net.Debt) * final_df$Beta +
+  final_df$Net.Debt / (final_df$Market.Capitalization + final_df$Net.Debt) *
+  final_df$Beta_Debt
+
+plot(final_df$Beta_Asset, main="Asset beta based on weekly returns (104 weeks)",
+     type="l")
+@
+
+
+\end{document}

@@ -1,0 +1,357 @@
+\documentclass{article}
+\usepackage[ansinew]{inputenc}
+\author{Julian Amon, Ekaterina Cherkasova, Nikolaus Dörfler, Aliaksandr Panko}
+\title{QFin Corporate Finance - Case Study I \\ The Boeing Co.}
+
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{dsfont}
+\usepackage{mathtools}
+\usepackage{enumitem}
+\usepackage{upgreek}
+\usepackage{float}
+\usepackage[left=25mm,top=25mm,bottom=25mm,right=25mm]{geometry}
+
+\begin{document}
+\maketitle
+
+
+\section{Exercise 1}
+<<echo=FALSE, results='hide',message=FALSE, warning = FALSE>>=
+library(readxl)
+library(printr)
+library(knitr)
+library(stargazer)
+
+Data_ex1_corporatefinanceproject <- read_excel("C:/Users/julia/Documents/Studium - MSc WU/3. Semester/Corporate Finance/Case Study/Case Study I/Data_ex1_corporatefinanceproject.xlsx",col_types = c("text", "numeric", "numeric","numeric", "numeric", "numeric", "numeric"))
+@
+
+Computing the book leverage:
+
+\[
+Bookleverage = \frac{longtermdebt + currentliabilites}{bookequity}
+\]
+
+<<>>=
+fin_output <- Data_ex1_corporatefinanceproject[,1]
+tot_debt <- c(0)
+book_eq <- c(0)
+mv_eq <- c(0)
+for (i in 1:nrow(Data_ex1_corporatefinanceproject)) {
+  tot_debt[i] <- as.numeric(Data_ex1_corporatefinanceproject[i,5])
+  book_eq[i] <- as.numeric(Data_ex1_corporatefinanceproject[i,6])
+  mv_eq[i] <- as.numeric(Data_ex1_corporatefinanceproject[i,7])
+}
+
+
+fin_output$Book_leverage <- tot_debt/book_eq
+@
+
+Computing the market leverage:\\
+
+\[
+Marketleverage = \frac{totaldebt}{MVofequity}
+\]
+<<echo=FALSE,results='hide'>>=
+fin_output$Market_leverage <- tot_debt/mv_eq
+stargazer(as.data.frame(fin_output),title="Multiples",digits = 2,summary = FALSE)
+@
+\begin{table}[h] \centering 
+  \caption{Multiples} 
+  \label{} 
+\begin{tabular}{@{\extracolsep{5pt}} cccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & Date & Book\_leverage & Market\_leverage \\ 
+\hline \\[-1.8ex] 
+1 & 1Q 2012 & $14.67$ & $1.59$ \\ 
+2 & 2Q 2012 & $12.85$ & $1.67$ \\ 
+3 & 3Q 2012 & $9.89$ & $1.59$ \\ 
+4 & 4Q 2012 & $13.90$ & $1.69$ \\ 
+5 & 1Q 2013 & $10.96$ & $1.43$ \\ 
+6 & 2Q 2013 & $11.07$ & $1.23$ \\ 
+7 & 3Q 2013 & $9.44$ & $1.14$ \\ 
+8 & 4Q 2013 & $5.00$ & $0.82$ \\ 
+9 & 1Q 2014 & $5.26$ & $0.92$ \\ 
+10 & 2Q 2014 & $5.54$ & $0.86$ \\ 
+11 & 3Q 2014 & $5.33$ & $0.95$ \\ 
+12 & 4Q 2014 & $9.57$ & $1.00$ \\ 
+13 & 1Q 2015 & $11.18$ & $0.90$ \\ 
+14 & 2Q 2015 & $14.55$ & $1.02$ \\ 
+15 & 3Q 2015 & $13.59$ & $1.08$ \\ 
+16 & 4Q 2015 & $13.76$ & $1.10$ \\ 
+17 & 1Q 2016 & $21.30$ & $1.05$ \\ 
+18 & 2Q 2016 & $137.50$ & $1.17$ \\ 
+19 & 3Q 2016 & $101.62$ & $1.17$ \\ 
+20 & 4Q 2016 & $101.62$ & $0.93$ \\ 
+21 & 1Q 2017 & $577.54$ & $0.84$ \\ 
+22 & 2Q 2017 & $$-$46.52$ & $0.82$ \\ 
+23 & 3Q 2017 & $78.48$ & $0.63$ \\ 
+24 & 4Q 2017 & $21.41$ & $0.50$ \\ 
+25 & 1Q 2018 & $86.48$ & $0.54$ \\ 
+26 & 2Q 2018 & $$-$83.38$ & $0.53$ \\ 
+27 & 3Q 2018 & $$-$95.84$ & $0.57$ \\ 
+\hline \\[-1.8ex] 
+\end{tabular} 
+\end{table}
+
+\newpage
+\section{Exercise 2}
+Calculating the Price-Earnings Ratio (P/E), the Market-to-Book Ratio (P/B), the Return on Equity (ROE), the Return on Assets (ROA), the Cash from operating activities (COA), the Cash from investing activities (CIA) and the Cash from financing activities (CFA) on a yearly and quarterly basis for the last 6 years.
+<<echo = FALSE, message = FALSE, warnings = FALSE,  results='hide'>>=
+Data1<- read_xlsx("C:/Users/julia/Documents/Studium - MSc WU/3. Semester/Corporate Finance/Case Study/Case Study I/Results.xlsx", sheet="Y")
+Data1 <- as.data.frame(Data1)
+@
+
+<<echo = FALSE, message = FALSE, warnings = FALSE, results='asis'>>=
+stargazer(Data1,summary=FALSE, rownames=FALSE , title='Calculations on yearly basis')
+@
+Calculating the Price-Earnings Ratio (P/E), the Market-to-Book Ratio (P/B), the Return on Equity (ROE), the Return on Assets (ROA), the Cash from operating activities (COA), the Cash from investing activities (CIA) and the Cash from financing activities (CFA) on a yearly and quarterly basis for the last 6 years. In order to obtain these ratios, we first need to recall the formulas. \\ \newline
+The Price-Earnings Ratio (P/E) is calculated in the following way:
+\[\mbox{P/E}=\frac{\mbox{Share price}}{EPS},\]
+where EPS is \textbf{ earnings per share} and calculated as
+\[\mbox{EPS}=\frac{\mbox{Net Income}}{\mbox{Shares outstanding}}\]
+The Market-to-Book Ratio(also called price-to-book ratio, P/B) is
+\[\mbox{P/B}=\frac{\mbox{Market Value of Equity}}{\mbox{Book Value of Equity}},\]
+where \[\mbox{Market Value of Equity} = \mbox{Shares outstanding} \times \mbox{Share price} \]
+The return on equity (ROE) and the return on assets (ROA) have the following formulas:
+\[\mbox{ROE}=\frac{\mbox{Net Income}}{\mbox{Book Value of Equity}} \]
+\[\mbox{ROA}=\frac{\mbox{Net Income}}{\mbox{Total Assets}} \]
+\begin{center}
+\includegraphics[width=\textwidth]{PE.jpg}
+\vspace{2cm}
+\includegraphics[width=\textwidth]{PB.jpg} 
+
+\includegraphics[width=\textwidth]{ROE.jpg}
+
+\includegraphics[width=\textwidth]{ROA.jpg}
+\end{center}
+<<echo = FALSE, message = FALSE, warnings = FALSE,  results='hide'>>=
+Data2<- read_xlsx("C:/Users/julia/Documents/Studium - MSc WU/3. Semester/Corporate Finance/Case Study/Case Study I/Results.xlsx", sheet="Q")
+Data2 <- as.data.frame(Data2)
+@
+\begin{center}
+<<echo = FALSE, message = FALSE, warnings = FALSE, results='hide'>>=
+stargazer(Data2,summary=FALSE, rownames=FALSE , title='Calculations on quaterly basis')
+@
+\end{center}
+Now, we consider the results on a quarterly basis:\\
+\begin{table}[h] \centering \small
+  \caption{Calculations on quaterly basis} 
+  \label{} 
+\begin{tabular}{@{\extracolsep{5pt}} cccccccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+Quarter Year & P/E & P/B & ROE,\% & ROA,\% & COA$^*$  & CIA$^*$  & CFA$^*$  \\ 
+\hline \\[-1.8ex] 
+Q1 2012 & $$ & $10.876$ & $18.361$ & $1.151$ & $837$ & $$-$3,003$ & $$-$1,187$ \\ 
+Q2 2012 & $$ & $9.475$ & $16.661$ & $1.185$ & $908$ & $$-$585$ & $$-$710$ \\ 
+Q3 2012 & $$ & $6.829$ & $13.600$ & $1.234$ & $1,596$ & $$-$1,005$ & $$-$337$ \\ 
+Q4 2012 & $14.601$ & $9.543$ & $16.670$ & $1.100$ & $4,167$ & $836$ & $$-$1,243$ \\ 
+Q1 2013 & $15.945$ & $8.611$ & $14.822$ & $1.223$ & $524$ & $$-$814$ & $$-$1,705$ \\ 
+Q2 2013 & $18.378$ & $10.121$ & $14.443$ & $1.180$ & $3,467$ & $$-$2,557$ & $$-$525$ \\ 
+Q3 2013 & $20.418$ & $9.744$ & $12.915$ & $1.222$ & $2,808$ & $$-$711$ & $$-$763$ \\ 
+Q4 2013 & $22.263$ & $6.802$ & $8.289$ & $1.331$ & $1,380$ & $$-$1,072$ & $$-$1,256$ \\ 
+Q1 2014 & $20.649$ & $6.267$ & $6.646$ & $1.054$ & $1,112$ & $406$ & $$-$3,668$ \\ 
+Q2 2014 & $18.334$ & $6.471$ & $11.749$ & $1.781$ & $1,809$ & $875$ & $$-$2,096$ \\ 
+Q3 2014 & $17.446$ & $6.212$ & $9.386$ & $1.470$ & $939$ & $$-$247$ & $$-$1,530$ \\ 
+Q4 2014 & $16.871$ & $10.451$ & $16.919$ & $1.578$ & $4,998$ & $1,433$ & $$-$1,299$ \\ 
+Q1 2015 & $17.915$ & $12.971$ & $16.873$ & $1.364$ & $88$ & $$-$214$ & $$-$2,935$ \\ 
+Q2 2015 & $17.921$ & $14.980$ & $17.720$ & $1.131$ & $3,297$ & $$-$198$ & $$-$2,605$ \\ 
+Q3 2015 & $15.659$ & $12.948$ & $25.237$ & $1.718$ & $2,859$ & $$-$553$ & $$-$2,069$ \\ 
+Q4 2015 & $18.640$ & $15.068$ & $16.196$ & $1.087$ & $3,119$ & $$-$881$ & $$-$311$ \\ 
+Q1 2016 & $16.064$ & $19.780$ & $30.151$ & $1.332$ & $1,275$ & $$-$438$ & $$-$4,265$ \\ 
+Q2 2016 & $21.897$ & $125.626$ & $$-$40$ & $$-$0.261$ & $3,190$ & $$-$912$ & $$-$1,544$ \\ 
+Q3 2016 & $19.021$ & $37.926$ & $108.952$ & $2.559$ & $3,202$ & $$-$614$ & $$-$2,204$ \\ 
+Q4 2016 & $19.640$ & $109.553$ & $199.633$ & $1.812$ & $2,876$ & $$-$1,416$ & $$-$1,618$ \\ 
+Q1 2017 & $20.400$ & $691.229$ & $1,662.105$ & $1.761$ & $2,098$ & $$-$260$ & $$-$2,463$ \\ 
+Q2 2017 & $16.214$ & $$-$59.305$ & $$-$85.862$ & $1.943$ & $4,949$ & $$-$1,123$ & $$-$3,311$ \\ 
+Q3 2017 & $22.434$ & $132.622$ & $166.667$ & $1.989$ & $3,396$ & $$-$218$ & $$-$3,335$ \\ 
+Q4 2017 & $21.077$ & $423.066$ & $882.254$ & $3.392$ & $2,904$ & $$-$426$ & $$-$2,241$ \\ 
+Q1 2018 & $20.894$ & $147.577$ & $202.700$ & $2.181$ & $3,136$ & $119$ & $$-$2,845$ \\ 
+Q2 2018 & $21.293$ & $$-$149.005$ & $$-$152.394$ & $1.940$ & $4,680$ & $$-$1,414$ & $$-$4,332$ \\ 
+Q3 2018 & $20.811$ & $$-$175.030$ & $$-$183.320$ & $2.061$ & $4,559$ & $$-$902$ & $$-$3,689$ \\ 
+\hline \\[-1.8ex] 
+\end{tabular} 
+\end{table}
+
+*Cashflows are in millions of US dollars.
+
+\section{Exercise 3}
+In this section we first consider the information on the announcement/ declaration date of dividends, dividend, ex-dividend date within the last 6 years. \\
+<<echo = FALSE, message = FALSE, warnings = FALSE,  results='hide'>>=
+Div<- read_xlsx("C:/Users/julia/Documents/Studium - MSc WU/3. Semester/Corporate Finance/Case Study/Case Study I/Ex_3.xlsx", sheet="Div")
+Div<- as.data.frame(Div)
+@
+\begin{center}
+<<echo = FALSE, message = FALSE, warnings = FALSE, results='asis'>>=
+stargazer(Div,summary=FALSE, rownames=FALSE , title='Dividend dates')
+@
+\end{center}
+
+The dates of announcement of a new repurchase plan for the next year are:
+<<echo = FALSE, message = FALSE, warnings = FALSE,  results='hide'>>=
+Rep<- read_xlsx("C:/Users/julia/Documents/Studium - MSc WU/3. Semester/Corporate Finance/Case Study/Case Study I/Ex_3.xlsx", sheet="Rep")
+Rep<- as.data.frame(Rep)
+@
+
+<<echo = FALSE, message = FALSE, warnings = FALSE, results='hide'>>=
+stargazer(Rep,summary=FALSE, rownames=FALSE )
+@
+\begin{table}[!h] \centering 
+  \caption{} 
+  \label{} 
+\begin{tabular}{@{\extracolsep{5pt}} c} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+Dates \\ 
+\hline \\[-1.8ex] 
+2017-12-11 \\ 
+2016-12-12 \\ 
+2015-12-14 \\ 
+2014-12-15 \\ 
+2013-12-16 \\ 
+2012-12-11 \\ 
+\hline \\[-1.8ex] 
+\end{tabular} 
+\end{table} 
+
+
+\section{Exercise 4}
+As a proxy for the market portfolio, we choose the S\&P 500 Total Return Index. This index is big enough for us to be able to consider it to be sufficiently diversified, i.e. so as not to contain any unsystematic risk and it is a performance index, meaning that dividend payments are included in its performance.
+
+\section{Exercise 5}
+We compute the arithmetic average annual return and the compound annual return with daily, weekly and monthly returns for the estimating window 1/1/2014 to 12/31/2018 for Boeing and the S\&P 500 TR index.
+<<message=FALSE,warning=FALSE,echo=FALSE>>=
+library(quantmod)
+library(stargazer)
+market_data<-read.csv2("C:/Users/julia/Documents/Studium - MSc WU/3. Semester/Corporate Finance/Case Study/Case Study I/Market Data.csv")
+market_data[,1]<-as.Date(as.character(market_data[,1]),"%d.%m.%Y")
+market_data[,2]<-as.numeric(as.character(market_data[,2]))
+market_data[,3]<-as.numeric(as.character(market_data[,3]))
+colnames(market_data)<-c("Date","BA","SPXT")
+market_xts<-xts(market_data[,2:3],order.by = market_data[,1])
+market_xts<-market_xts[2014:nrow(market_xts),]
+@
+
+<<results='asis',message=FALSE,warning=FALSE>>=
+#########LOG RETURNS###############
+#Annual mean returns
+yearlymean_BA<-mean(yearlyReturn(market_xts$BA,type="log"))
+yearlymean_market<-mean(yearlyReturn(market_xts$SPXT,type="log"))
+
+#Daily mean returns
+dailymean_BA<-mean(dailyReturn(market_xts$BA,type="log"))
+dailymean_market<-mean(dailyReturn(market_xts$SPXT,type="log"))
+
+#Weekly mean returns
+weeklymean_BA<-mean(weeklyReturn(market_xts$BA,type="log"))
+weeklymean_market<-mean(weeklyReturn(market_xts$SPXT,type="log"))
+
+#Monthly mean returns
+monthlymean_BA<-mean(monthlyReturn(market_xts$BA,type="log"))
+monthlymean_market<-mean(monthlyReturn(market_xts$SPXT,type="log"))
+
+#Compounding to annual returns
+results_log<-matrix(0,4,2)
+colnames(results_log)<-c("BA","SPXT")
+rownames(results_log)<-c("Daily","Weekly","Monthly","Yearly")
+
+results_log[1,1]<-exp(252*dailymean_BA)-1
+results_log[1,2]<-exp(252*dailymean_market)-1
+
+results_log[2,1]<-exp(52*weeklymean_BA)-1
+results_log[2,2]<-exp(52*weeklymean_market)-1
+
+results_log[3,1]<-exp(12*monthlymean_BA)-1
+results_log[3,2]<-exp(12*monthlymean_market)-1
+
+results_log[4,1]<-yearlymean_BA
+results_log[4,2]<-yearlymean_market
+stargazer(results_log, title="Annualised log returns")
+
+
+
+#########DISCRETE RETURNS###############
+#Annual mean returns
+yearlymean_BA<-mean(yearlyReturn(market_xts$BA,type="arithmetic"))
+yearlymean_market<-mean(yearlyReturn(market_xts$SPXT,type="arithmetic"))
+
+#Daily mean returns
+dailymean_BA<-mean(dailyReturn(market_xts$BA,type="arithmetic"))
+dailymean_market<-mean(dailyReturn(market_xts$SPXT,type="arithmetic"))
+
+#Weekly mean returns
+weeklymean_BA<-mean(weeklyReturn(market_xts$BA,type="arithmetic"))
+weeklymean_market<-mean(weeklyReturn(market_xts$SPXT,type="arithmetic"))
+
+#Monthly mean returns
+monthlymean_BA<-mean(monthlyReturn(market_xts$BA,type="arithmetic"))
+monthlymean_market<-mean(monthlyReturn(market_xts$SPXT,type="arithmetic"))
+
+#Compounding to annual returns
+results_arithmetic<-matrix(0,4,2)
+colnames(results_arithmetic)<-c("BA","SPXT")
+rownames(results_arithmetic)<-c("Daily","Weekly","Monthly","Yearly")
+
+results_arithmetic[1,1]<-(1+dailymean_BA)^252-1
+results_arithmetic[1,2]<-(1+dailymean_market)^252-1
+
+results_arithmetic[2,1]<-(1+weeklymean_BA)^52-1
+results_arithmetic[2,2]<-(1+weeklymean_market)^52-1
+
+results_arithmetic[3,1]<-(1+monthlymean_BA)^12-1
+results_arithmetic[3,2]<-(1+monthlymean_market)^12-1
+
+results_arithmetic[4,1]<-yearlymean_BA
+results_arithmetic[4,2]<-yearlymean_market
+stargazer(results_arithmetic, title="Annualised discrete returns")
+@
+
+\section{Exercise 6}
+<<results='asis'>>=
+vola_daily_BA<-sd(dailyReturn(market_xts$BA,type="log"))*sqrt(252)
+vola_dailymarket<-sd(dailyReturn(market_xts$SPXT,type="log"))*sqrt(252)
+vola_weekly_BA<-sd(weeklyReturn(market_xts$BA,type="log"))*sqrt(52)
+vola_weeklymarket<-sd(weeklyReturn(market_xts$SPXT,type="log"))*sqrt(52)
+vola_monthly_BA<-sd(monthlyReturn(market_xts$BA,type="log"))*sqrt(12)
+vola_monthlymarket<-sd(monthlyReturn(market_xts$SPXT,type="log"))*sqrt(12)
+
+results_vola<-matrix(0,3,2)
+colnames(results_vola)<-c("BA","SPXT")
+rownames(results_vola)<-c("Daily","Weekly","Monthly")
+
+results_vola[1,1]<-vola_daily_BA
+results_vola[1,2]<-vola_dailymarket
+results_vola[2,1]<-vola_weekly_BA
+results_vola[2,2]<-vola_weeklymarket
+results_vola[3,1]<-vola_monthly_BA
+results_vola[3,2]<-vola_monthlymarket
+stargazer(results_vola, title="Annualised volatilities")
+@
+
+
+\section{Exercise 7}
+<<fig.height=4.5>>=
+market_xts<-xts(market_data[,2:3],order.by = market_data[,1])
+weekly_BA<-weeklyReturn(market_xts$BA,type="log")
+weeklymarket<-weeklyReturn(market_xts$SPXT,type="log")
+N<-length(weeklymarket)
+rolling_volas<-matrix(0,2,N-103)
+for(i in 1:(N-103)){
+  rolling_volas[1,i]<-sd(weekly_BA[i:(104+i-1)])
+  rolling_volas[2,i]<-sd(weeklymarket[i:(104+i-1)])
+}
+volas_BA<-xts(rolling_volas[1,],order.by = index(weekly_BA)[104:N])*sqrt(52)
+volas_market<-xts(rolling_volas[2,],order.by = index(weeklymarket)[104:N])*sqrt(52)
+
+invisible(plot(volas_BA,type="l",main="Return volatilities (104 week rolling window)",
+               ylim=c(0,0.5),ylab="Annualised Volatility"))
+lines(volas_market,col=3)
+
+invisible(plot(weekly_BA^2))
+lines(weeklymarket^2,col=3)
+@
+
+\end{document}
